@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import * as monaco from 'monaco-editor';
 import { MonacoBinding } from 'y-monaco';
 import { editor } from 'monaco-editor';
-import { Awareness } from 'y-protocols/awareness'; 
+import { Awareness, applyAwarenessUpdate } from 'y-protocols/awareness'; 
 import { Play, X, Terminal, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 self.MonacoEnvironment = {
@@ -161,7 +161,7 @@ const App = () => {
           case 'awareness':
             if (message.update) {
               const update = new Uint8Array(message.update);
-              awareness.applyUpdate(update);
+              applyAwarenessUpdate(awareness, update, null);
             }
             break;
             
@@ -191,7 +191,7 @@ const App = () => {
       }
     });
 
-    awareness.on('update', (update) => {
+    awareness.on('update', (update : Uint8Array) => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
           userName,
