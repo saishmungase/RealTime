@@ -101,7 +101,7 @@ const App = () => {
       }
     });
 
-    const socket = new WebSocket("ws://localhost:8080"); 
+    const socket = new WebSocket("wss://realtime-x8ey.onrender.com"); 
     socket.binaryType = "arraybuffer";
     
     socket.onopen = () => {
@@ -114,6 +114,8 @@ const App = () => {
         fileName,
         fileExtension
       }));
+      
+      setIsJoined(true);
     };
 
     socket.onclose = () => {
