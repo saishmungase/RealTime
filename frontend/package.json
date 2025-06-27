@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "framer-motion": "^12.18.1",
     "lucide-react": "^0.510.0",
     "monaco-editor": "^0.52.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7.6.2",
+    "uuid": "^11.1.0",
     "y-monaco": "^0.1.6",
     "y-protocols": "^1.0.6",
     "y-websocket": "^3.0.0",
