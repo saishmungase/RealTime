@@ -20,7 +20,7 @@ export default function Navbar() {
   const navItems = [
     { icon: Home, path: "/", label: "Home" },
     { icon: Clock, path: "/history", label: "History" },
-    { icon: Plus, path: "/create", label: "Create" },
+    { icon: Plus, path: "/room", label: "Room" },
   ];
 
   return (
