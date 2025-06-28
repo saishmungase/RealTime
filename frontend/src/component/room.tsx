@@ -8,6 +8,9 @@ import { Play, X, Terminal, Loader2, CheckCircle, AlertCircle, Code2, Users, Che
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
+import moonImg from "../public/moon.png";
+import sunImg from "../public/sun.png"
+
 self.MonacoEnvironment = {
   getWorkerUrl: function (_moduleId: string, label: string) {
     if (label === 'typescript' || label === 'javascript') {
@@ -509,7 +512,7 @@ const Room = () => {
                   exit={{ rotate: 180, opacity: 0 }}
                   transition={{ duration: 0.3 }}
                   className='w-full h-full p-1 object-contain' 
-                  src={mode ? "/moon.png" : "/sun.png"}
+                  src={mode ? moonImg : sunImg}
                   alt={mode ? "Dark mode" : "Light mode"}
                 />
               </motion.span>
