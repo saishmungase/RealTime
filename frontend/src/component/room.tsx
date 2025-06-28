@@ -8,8 +8,17 @@ import { Play, X, Terminal, Loader2, CheckCircle, AlertCircle, Code2, Users, Che
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
-import moonImg from "../public/moon.png";
-import sunImg from "../public/sun.png"
+import moonImg from '../public/moon.png'
+import sunImg from '../public/sun.png'
+
+interface HistoryItem {
+  id: string
+  roomId: string
+  language: string
+  createdAt: string
+  lastModified: string
+  preview: string
+}
 
 self.MonacoEnvironment = {
   getWorkerUrl: function (_moduleId: string, label: string) {
@@ -32,6 +41,9 @@ self.MonacoEnvironment = {
 const Room = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const historyIntervalRef = useRef<number | null>(null);
+  const currentHistoryIdRef = useRef<string>('');
+  
   const [connected, setConnected] = useState(false);
   const [userName, setUserName] = useState('');
   const [fileName, setFileName] = useState('main');
@@ -45,6 +57,108 @@ const Room = () => {
   const [copied, setCopied] = useState(false);
 
   const navigate = useNavigate()
+
+  const generateUniqueId = () => {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  };
+
+  const isSaveHistoryEnabled = () => {
+    try {
+      const saveHistory = localStorage.getItem('saveHistory');
+      return saveHistory === 'true';
+    } catch (error) {
+      console.error('Error checking saveHistory:', error);
+      return false;
+    }
+  };
+
+  const getCodingHistory = (): HistoryItem[] => {
+    try {
+      const history = localStorage.getItem('codingHistory');
+      return history ? JSON.parse(history) : [];
+    } catch (error) {
+      console.error('Error getting coding history:', error);
+      return [];
+    }
+  };
+
+  const saveCodingHistory = (historyItems: HistoryItem[]) => {
+    try {
+      localStorage.setItem('codingHistory', JSON.stringify(historyItems));
+    } catch (error) {
+      console.error('Error saving coding history:', error);
+    }
+  };
+
+  const saveCurrentCodeToHistory = () => {
+    if (!isSaveHistoryEnabled() || !editorRef.current || !isJoined) {
+      return;
+    }
+
+    const currentCode = editorRef.current.getValue();
+    const currentTime = new Date().toISOString();
+    
+    if (!currentCode.trim()) {
+      return;
+    }
+
+    const history = getCodingHistory();
+    const currentHistoryId = currentHistoryIdRef.current;
+
+    const existingIndex = history.findIndex(item => item.id === currentHistoryId);
+    
+    if (existingIndex !== -1) {
+      history[existingIndex] = {
+        ...history[existingIndex],
+        lastModified: currentTime,
+        preview: currentCode,
+        language: fileExtension
+      };
+    } else {
+      const newHistoryItem: HistoryItem = {
+        id: currentHistoryId,
+        roomId: userName,
+        language: fileExtension,
+        createdAt: currentTime,
+        lastModified: currentTime,
+        preview: currentCode
+      };
+      history.push(newHistoryItem);
+    }
+
+    saveCodingHistory(history);
+  };
+
+  const startHistorySaving = () => {
+    if (!isSaveHistoryEnabled()) {
+      return;
+    }
+
+    currentHistoryIdRef.current = generateUniqueId();
+
+    if (historyIntervalRef.current) {
+      clearInterval(historyIntervalRef.current);
+    }
+
+    historyIntervalRef.current = setInterval(() => {
+      saveCurrentCodeToHistory();
+    }, 20000); 
+  };
+
+  const stopHistorySaving = () => {
+    if (historyIntervalRef.current) {
+      clearInterval(historyIntervalRef.current);
+      historyIntervalRef.current = null;
+    }
+  };
+
+  const saveFinalCodeAndLeave = () => {
+    saveCurrentCodeToHistory();
+    
+    stopHistorySaving();
+    
+    setIsJoined(false);
+  };
 
   const generateRoomId = () => {
     const newRoomId = Math.random().toString(36).substring(2, 15)
@@ -108,6 +222,8 @@ const Room = () => {
 
   useEffect(() => {
     if (!isJoined || !containerRef.current) return;
+
+    startHistorySaving();
 
     const yDoc = new Y.Doc();
     const yText = yDoc.getText('monaco');
@@ -235,6 +351,8 @@ const Room = () => {
     });
 
     return () => {
+      stopHistorySaving();
+      
       if (binding) binding.destroy();
       if (awareness) awareness.destroy();
       if (yDoc) yDoc.destroy();
@@ -242,6 +360,12 @@ const Room = () => {
       if (socket && socket.readyState === WebSocket.OPEN) socket.close();
     };
   }, [isJoined, userName, fileName, fileExtension]);
+
+  useEffect(() => {
+    return () => {
+      stopHistorySaving();
+    };
+  }, []);
 
   const getLanguageFromExtension = (ext: string) => {
     const extensionMap: Record<string, string> = {
@@ -291,7 +415,6 @@ const Room = () => {
           transition={{ delay: 0.2, duration: 0.6 }}
           className="bg-white rounded-2xl p-8 shadow-lg border border-blue-100 w-full max-w-md"
         >
-          {/* Room ID Section */}
           <div className="mb-8">
             <label className="block text-lg font-semibold text-gray-800 mb-4">Room ID</label>
             <div className="flex gap-3">
@@ -382,7 +505,6 @@ const Room = () => {
             Go Back
           </motion.button>
 
-          {/* Info Section */}
           <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
             <div className="flex items-start gap-3">
               <Code2 className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -406,14 +528,12 @@ const Room = () => {
       transition={{ duration: 0.5 }}
       className="flex flex-col h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white overflow-hidden"
     >
-      {/* Enhanced Header */}
       <motion.div 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.1 }}
         className="relative p-6 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 border-b border-blue-500/30 shadow-2xl backdrop-blur-sm"
       >
-        {/* Animated background pattern */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 opacity-50">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=&#34;60&#34; height=&#34;60&#34; viewBox=&#34;0 0 60 60&#34; xmlns=&#34;http://www.w3.org/2000/svg&#34;%3E%3Cg fill=&#34;none&#34; fill-rule=&#34;evenodd&#34;%3E%3Cg fill=&#34;%239C92AC&#34; fill-opacity=&#34;0.1&#34;%3E%3Ccircle cx=&#34;30&#34; cy=&#34;30&#34; r=&#34;4&#34;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] animate-pulse"></div>
         </div>
@@ -475,6 +595,15 @@ const Room = () => {
                         Disconnected
                       </motion.span>
                     }
+                    {isSaveHistoryEnabled() && (
+                      <motion.span 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="flex items-center font-semibold text-yellow-300 ml-2"
+                      >
+                        • Auto-save enabled
+                      </motion.span>
+                    )}
                   </span>
                 </motion.p>
               </div>
@@ -487,7 +616,6 @@ const Room = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="flex space-x-4"
           >
-            {/* Enhanced Theme Toggle */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -518,7 +646,6 @@ const Room = () => {
               </motion.span>
             </motion.button>
                 
-            {/* Enhanced Run Button */}
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(34, 197, 94, 0.4)" }}
               whileTap={{ scale: 0.95 }}
@@ -551,7 +678,6 @@ const Room = () => {
               </div>
             </motion.button>
               
-            {/* Enhanced Terminal Button */}
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(107, 114, 128, 0.4)" }}
               whileTap={{ scale: 0.95 }}
@@ -567,11 +693,12 @@ const Room = () => {
               <span>{showTerminal ? 'Hide Terminal' : 'Show Terminal'}</span>
             </motion.button>
               
-            {/* Enhanced Leave Button */}
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(239, 68, 68, 0.4)" }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setIsJoined(false)}
+              onClick={() => {
+                saveFinalCodeAndLeave()
+              }}
               className="py-3 px-6 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 shadow-lg border border-red-400/30 backdrop-blur-sm"
             >
               <X size={16} />
@@ -581,7 +708,6 @@ const Room = () => {
         </div>
       </motion.div>
               
-      {/* Enhanced Editor Container */}
       <motion.div 
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -594,11 +720,9 @@ const Room = () => {
           className="relative h-full w-full rounded-t-2xl overflow-hidden border-t border-gray-700/50 shadow-2xl backdrop-blur-sm" 
           layoutId="editor"
         />
-        {/* Editor border glow effect */}
         <div className="absolute inset-0 rounded-t-2xl border border-blue-500/20 pointer-events-none" />
       </motion.div>
               
-      {/* Enhanced Terminal */}
       <AnimatePresence>
         {showTerminal && (
           <motion.div

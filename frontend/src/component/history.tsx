@@ -1,8 +1,7 @@
-
 import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
-import { Clock, RotateCcw, Trash2, Code2 } from "lucide-react"
-import { useNavigate } from "react-router-dom"
+import { Clock,  Trash2, Code2, Check, Copy } from "lucide-react"
+import CodeBlock from "./code-block"
 
 interface HistoryItem {
   id: string
@@ -16,7 +15,7 @@ interface HistoryItem {
 export default function HistoryPage() {
   const [saveHistory, setSaveHistory] = useState(false)
   const [history, setHistory] = useState<HistoryItem[]>([])
-  const navigate = useNavigate();
+  const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const savedPreference = localStorage.getItem("saveHistory")
@@ -32,6 +31,18 @@ export default function HistoryPage() {
     }
   }, [])
 
+  const copyCode = (code: string, itemId: string) => {
+    navigator.clipboard.writeText(code)
+    setCopiedItems(prev => new Set([...prev, itemId]))
+    setTimeout(() => {
+      setCopiedItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(itemId)
+        return newSet
+      })
+    }, 2000)
+  }
+
   const handleToggleHistory = (enabled: boolean) => {
     setSaveHistory(enabled)
     localStorage.setItem("saveHistory", JSON.stringify(enabled))
@@ -45,10 +56,6 @@ export default function HistoryPage() {
         setHistory(JSON.parse(savedHistory))
       }
     }
-  }
-
-  const handleRegenerateRoom = (roomId: string) => {
-    navigate(`/room/${roomId}`)
   }
 
   const handleDeleteHistory = (id: string) => {
@@ -85,7 +92,6 @@ export default function HistoryPage() {
           <p className="text-xl text-gray-600">Manage your saved coding sessions and revisit your work</p>
         </motion.div>
 
-        {/* Toggle Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -113,7 +119,6 @@ export default function HistoryPage() {
           </div>
         </motion.div>
 
-        {/* History List */}
         {saveHistory ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 0.6 }}>
             {history.length === 0 ? (
@@ -143,7 +148,7 @@ export default function HistoryPage() {
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                          <code className="text-sm text-gray-700 font-mono">{item.preview}</code>
+                          <CodeBlock code={item.preview} language={item.language} />
                         </div>
 
                         <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -156,11 +161,11 @@ export default function HistoryPage() {
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          onClick={() => handleRegenerateRoom(item.roomId)}
+                          onClick={() => copyCode(item.preview, item.id)}
                           className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2"
                         >
-                          <RotateCcw className="w-4 h-4" />
-                          Regenerate
+                          {copiedItems.has(item.id) ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          {copiedItems.has(item.id) ? "Copied!" : "Copy"}
                         </motion.button>
 
                         <motion.button
