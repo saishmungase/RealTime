@@ -1,11 +1,22 @@
 import { motion } from "framer-motion"
 import { Code2, Users, Zap, Globe, Sparkles, ArrowRight } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 export default function Landing() {
   const [roomId, setRoomId] = useState("")
   const navigate = useNavigate();
+  useEffect(() => {
+    pingBackend();
+  }, []); 
+
+  const pingBackend = async () => {
+      const response = await fetch("https://realtime-x8ey.onrender.com/health");
+      const text = await response.text();
+      if(text == "OK"){
+        console.log(text);
+      }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">

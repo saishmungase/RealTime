@@ -4,8 +4,17 @@ import { RoomManager } from './roomManager.js';
 import * as Y from 'yjs';
 
 const server = http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('Collaborative Code Editor Running');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.url === '/health' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('OK');
+  } else {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Collaborative Code Editor Running');
+  }
 });
 
 const wss = new WebSocketServer({ server });
