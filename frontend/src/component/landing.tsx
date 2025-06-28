@@ -40,6 +40,9 @@ export default function Landing() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={()=>{
+                  navigate("/room")
+                }}
                 className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
               >
                 <Sparkles className="w-5 h-5" />
@@ -59,7 +62,7 @@ export default function Landing() {
                   whileTap={{ scale: 0.95 }}
                   className="px-6 py-4 bg-white border-2 border-blue-500 text-blue-600 rounded-full font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center gap-2"
                   onClick={() => {
-                    navigate("/create");
+                    navigate("/room");
                   }}
                 >
                   <ArrowRight className="w-5 h-5" />
@@ -183,6 +186,9 @@ export default function Landing() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              navigate("/room")
+            }}
             className="px-8 py-4 bg-white text-blue-600 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
           >
             Get Started Now
