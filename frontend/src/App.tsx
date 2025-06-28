@@ -3,7 +3,7 @@ import Landing from './component/landing';
 import Navbar from "./component/navbar";
 import HistoryPage from "./component/history";
 import Room from "./component/room";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 
 const App = () => {
