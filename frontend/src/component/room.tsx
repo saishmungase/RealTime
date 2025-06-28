@@ -4,7 +4,7 @@ import * as monaco from 'monaco-editor';
 import { MonacoBinding } from 'y-monaco';
 import { editor } from 'monaco-editor';
 import { Awareness, applyAwarenessUpdate } from 'y-protocols/awareness'; 
-import { Play, X, Terminal, Loader2, CheckCircle, AlertCircle, Code2, Users } from 'lucide-react';
+import { Play, X, Terminal, Loader2, CheckCircle, AlertCircle, Code2, Users, Check, Copy } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
@@ -39,8 +39,20 @@ const Room = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [outputStatus, setOutputStatus] = useState('');
   const [mode, setMode] = useState(false)
+  const [copied, setCopied] = useState(false);
 
   const navigate = useNavigate()
+
+  const generateRoomId = () => {
+    const newRoomId = Math.random().toString(36).substring(2, 15)
+    setUserName(newRoomId)
+  }
+
+  const copyRoomId = () => {
+    navigator.clipboard.writeText(userName)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
   
   const handleJoinRoom = () => {
     if (userName.trim()) {
@@ -276,15 +288,50 @@ const Room = () => {
           transition={{ delay: 0.2, duration: 0.6 }}
           className="bg-white rounded-2xl p-8 shadow-lg border border-blue-100 w-full max-w-md"
         >
-          <div className="mb-6">
-            <label className="block text-lg font-semibold text-gray-800 mb-4">Room Code</label>
-            <input
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="Enter/Create Code"
-              className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-lg"
-            />
+          {/* Room ID Section */}
+          <div className="mb-8">
+            <label className="block text-lg font-semibold text-gray-800 mb-4">Room ID</label>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Enter custom room ID or generate one"
+                className="flex-1 px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-lg"
+              />
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={generateRoomId}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                Generate
+              </motion.button>
+            </div>
+
+            {userName && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">Your Room ID:</p>
+                    <p className="text-lg font-mono font-bold text-blue-800">{userName}</p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={copyRoomId}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? "Copied!" : "Copy"}
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
           </div>
 
           <div className="mb-6">
