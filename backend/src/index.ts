@@ -2,6 +2,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 import http from 'http';
 import { RoomManager } from './roomManager.js';
 import * as Y from 'yjs';
+import countRooms from './count.js';
 
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -35,6 +36,9 @@ wss.on('connection', (ws: WebSocket) => {
       switch (type) {
         
         case 'init':
+          (async () => {
+            await countRooms(); 
+          })();
           const doc = roomManager.getFileData(userName);
           const encoded = doc?.document ? Y.encodeStateAsUpdate(doc.document) : [];
           console.log("Server Given File :- " + doc?.file + doc?.extension);

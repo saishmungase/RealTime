@@ -1,7 +1,17 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import WebSocket, { WebSocketServer } from 'ws';
 import http from 'http';
 import { RoomManager } from './roomManager.js';
 import * as Y from 'yjs';
+import countRooms from './count.js';
 const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -32,6 +42,9 @@ wss.on('connection', (ws) => {
                 roomManager.addUser(userName, ws);
             switch (type) {
                 case 'init':
+                    (() => __awaiter(void 0, void 0, void 0, function* () {
+                        yield countRooms();
+                    }))();
                     const doc = roomManager.getFileData(userName);
                     const encoded = (doc === null || doc === void 0 ? void 0 : doc.document) ? Y.encodeStateAsUpdate(doc.document) : [];
                     console.log("Server Given File :- " + (doc === null || doc === void 0 ? void 0 : doc.file) + (doc === null || doc === void 0 ? void 0 : doc.extension));
