@@ -16,9 +16,8 @@ const countRooms = () => __awaiter(void 0, void 0, void 0, function* () {
             where: { id }
         });
         if (!user) {
-            return {
-                message: "User Does Not Exist!"
-            };
+            console.log("User Does Not Exist !");
+            return;
         }
         console.log(user);
         let score = user.rooms + 1;

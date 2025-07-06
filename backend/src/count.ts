@@ -12,9 +12,8 @@ const countRooms = async () => {
         });
 
         if (!user) {
-            return {
-                message: "User Does Not Exist!"
-            };
+            console.log("User Does Not Exist !")
+            return;
         }
         
         console.log(user)
