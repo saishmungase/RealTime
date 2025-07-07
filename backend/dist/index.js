@@ -11,20 +11,22 @@ import WebSocket, { WebSocketServer } from 'ws';
 import http from 'http';
 import { RoomManager } from './roomManager.js';
 import * as Y from 'yjs';
-import countRooms from './count.js';
-const server = http.createServer((req, res) => {
+import countRooms, { totalRooms } from './count.js';
+const server = http.createServer((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    const roomCount = yield totalRooms();
+    console.log(roomCount);
     if (req.url === '/health' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('OK');
+        res.end(JSON.stringify({ count: roomCount }));
     }
     else {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('Collaborative Code Editor Running');
     }
-});
+}));
 const wss = new WebSocketServer({ server });
 const roomManager = new RoomManager();
 wss.on('connection', (ws) => {

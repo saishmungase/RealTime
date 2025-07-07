@@ -36,4 +36,21 @@ const countRooms = async () => {
 
 }
 
+export const totalRooms = async () => {
+    const id = process.env.USER_ID;
+
+    try{
+        const user = await prisma.roomCount.findUnique({
+            where: { id }
+        });
+
+        return user?.rooms;
+    }
+    catch(e){
+        console.log("Error !")
+    }
+
+}
+
+
 export default countRooms;

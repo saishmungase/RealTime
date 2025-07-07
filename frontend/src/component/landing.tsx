@@ -1,21 +1,36 @@
-import { motion } from "framer-motion"
+import { motion, Variants } from "framer-motion"
 import { Code2, Users, Zap, Globe, Sparkles, ArrowRight } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 export default function Landing() {
   const [roomId, setRoomId] = useState("")
+  const [roomCount, setRoomCount] = useState(-1);
   const navigate = useNavigate();
   useEffect(() => {
     pingBackend();
   }, []); 
 
+  const words = ["Total", roomCount.toString(), "Rooms", "Generated"];
+
+  const blurInUp: Variants = {
+    hidden: { opacity: 0, y: 10, filter: "blur(8px)" },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: {
+        delay: i * 0.2,
+        duration: 0.6,
+        ease: "easeOut",
+      },
+    }),
+  };
+
   const pingBackend = async () => {
       const response = await fetch("https://realtime-x8ey.onrender.com/health");
-      const text = await response.text();
-      if(text == "OK"){
-        console.log(text);
-      }
+      const data = await response.json();
+      setRoomCount(data.count)
   }
 
   return (
@@ -41,7 +56,26 @@ export default function Landing() {
             <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-6">
               CodeSync
             </h1>
-
+            {roomCount !== -1 && (
+              <div className="flex justify-center gap-2 text-xl md:text-xl font-medium text-gray-600 mt-8">
+                {words.map((word, i) => (
+                  <motion.h3
+                    key={i}
+                    custom={i}
+                    initial="hidden"
+                    animate="visible"
+                    variants={blurInUp}
+                    className={`${
+                      i === 1
+                        ? "text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-blue-700"
+                        : ""
+                    }`}
+                  >
+                    {word}
+                  </motion.h3>
+                ))}
+              </div>
+            )}
             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
               Real-time collaborative coding made simple. Create rooms, invite friends, and code together in perfect
               harmony.

@@ -35,4 +35,16 @@ const countRooms = () => __awaiter(void 0, void 0, void 0, function* () {
         console.log("Server Error !");
     }
 });
+export const totalRooms = () => __awaiter(void 0, void 0, void 0, function* () {
+    const id = process.env.USER_ID;
+    try {
+        const user = yield prisma.roomCount.findUnique({
+            where: { id }
+        });
+        return user === null || user === void 0 ? void 0 : user.rooms;
+    }
+    catch (e) {
+        console.log("Error !");
+    }
+});
 export default countRooms;
