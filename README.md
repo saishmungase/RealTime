@@ -528,7 +528,7 @@ This project is licensed under the **ISC License** - see the LICENSE file for de
 ## 📧 Contact & Support
 
 - **GitHub Issues**: [Report bugs or request features](../../issues)
-- **Email**: saish@example.com
+- **Email**: saishmungase@example.com
 - **Author**: [Saish Mungase](https://github.com/saishmungase)
 
 ---
