@@ -38,8 +38,6 @@ self.MonacoEnvironment = {
   }
 };
 
-const COMPILER = import.meta.env.VITE_COMPILER_URL;
-
 const Room = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
