@@ -38,6 +38,8 @@ self.MonacoEnvironment = {
   }
 };
 
+const COMPILER = import.meta.env.VITE_COMPILER_URL;
+
 const Room = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -56,7 +58,75 @@ const Room = () => {
   const [mode, setMode] = useState(false)
   const [copied, setCopied] = useState(false);
 
+  const pollTimeoutRef : any = useRef(null);
+  const isUnmountedRef = useRef(false);
+  const jobRouteRef = useRef(null);
+  const maxExecutionTimeoutRef = useRef<number | null>(null);
+
   const navigate = useNavigate()
+
+  const pollJobStatus = async () => {
+    try {
+      const res = await fetch(`${COMPILER}${jobRouteRef.current}`)
+      const result = await res.json();
+
+      handleJobStatus(result);
+    } catch (error) {
+      console.log(error)
+      handleJobFailure("Failed While Requesting Backend !")
+    }
+  }
+
+  const handleJobStatus = (result : {status : string, message : string, data : { response : {output : string, status : string}}}) => {
+    switch(result.status){
+      case "pending":
+        setTerminalOutput("Analyzing code...")
+        setOutputStatus("pending")
+        scheduleNextPoll();
+        break;
+      
+      case "pop-success":
+        console.log(result)
+        setTerminalOutput(result.data.response.output || "Execution Completed")
+        setOutputStatus(result.data.response.status)
+        stopPolling();
+        if(maxExecutionTimeoutRef.current) clearTimeout(maxExecutionTimeoutRef.current);
+        break;
+      
+      case "pop-issue":
+        handleJobFailure(result.message || "Execution Failed")
+        break;
+
+      default:
+        handleJobFailure("Unknown job state");
+    }
+  }
+
+  const scheduleNextPoll = () => {
+    if(isUnmountedRef.current) return;
+
+    pollTimeoutRef.current = setTimeout(() => {
+      pollJobStatus();
+    }, 2000)
+  }
+
+  const stopPolling = () => {
+    clearTimeout(pollTimeoutRef?.current);
+    setIsRunning(false);
+  }
+
+  const handleJobFailure = (message : string) => {
+    setTerminalOutput(message);
+    setOutputStatus("error")
+    stopPolling();
+  }
+
+  useEffect(() => {
+    return () => {
+      isUnmountedRef.current = true;
+      stopPolling();
+    };
+  }, []);
 
   const generateUniqueId = () => {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -188,28 +258,39 @@ const Room = () => {
     setShowTerminal(true);
     setTerminalOutput('Running code...');
     setOutputStatus('');
+    maxExecutionTimeoutRef.current = setTimeout(() => {
+      handleJobFailure("Execution timed out (Internal Server Limit reached).");
+    }, 30000);
     
     try {
       const code = editorRef.current.getValue();
       const language = fileExtension;
-      console.log(code, language);
-      const response = await fetch('https://code-executor-q4yf.onrender.com/run-code', {
+      console.log("Data: -", fileName + "." + language + "( " + getLanguageFromExtension(language) + " )")
+      const response = await fetch(`${COMPILER}/set-job`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code : code, language : language, fileName : fileName }),
+        body: JSON.stringify({ 
+          user : "CodeSync", 
+          filename : fileName,
+          language : getLanguageFromExtension(language),
+          code : code, 
+          extension : language
+        }),
       });
       
-      const result = await response.json();
-      console.log(result);
-      setTerminalOutput(result.output);
-      setOutputStatus(result.status);
-    } catch (error) {
-      setTerminalOutput(`Error: ${error instanceof Error ? error.message : String(error)}`);
-      setOutputStatus('Error');
-    } finally {
-      setIsRunning(false);
+      const result = await response.json(); 
+      if(result.status !== "push-success"){
+        handleJobFailure("Unable to Add You Code for Execution.")
+        return;
+      } 
+
+      jobRouteRef.current = result.statusUrl;
+      pollJobStatus();
+
+    } catch (error : any) {
+      handleJobFailure(error.message);
     }
   };
 
