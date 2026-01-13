@@ -67,13 +67,13 @@ const Room = () => {
 
   const pollJobStatus = async () => {
     try {
-      const res = await fetch(`${COMPILER}${jobRouteRef.current}`)
+      const res = await fetch(`/api${jobRouteRef.current}`)
       const result = await res.json();
 
       handleJobStatus(result);
     } catch (error) {
       console.log(error)
-      handleJobFailure("Failed While Requesting Backend !")
+      handleJobFailure("Proxy Error: Unable to reach backend.")
     }
   }
 
@@ -266,7 +266,7 @@ const Room = () => {
       const code = editorRef.current.getValue();
       const language = fileExtension;
       console.log("Data: -", fileName + "." + language + "( " + getLanguageFromExtension(language) + " )")
-      const response = await fetch(`${COMPILER}/set-job`, {
+      const response = await fetch(`/api/set-job`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
