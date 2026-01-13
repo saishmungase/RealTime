@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Use the environment variable pushed to Vercel
   const AWS_URL = process.env.VITE_COMPILER_URL; 
 
   try {

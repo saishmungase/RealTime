@@ -41,7 +41,7 @@ self.MonacoEnvironment = {
 const Room = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const historyIntervalRef = useRef<number | null>(null);
+  const historyIntervalRef = useRef<any | null>(null);
   const currentHistoryIdRef = useRef<string>('');
   
   const [connected, setConnected] = useState(false);
@@ -59,7 +59,7 @@ const Room = () => {
   const pollTimeoutRef : any = useRef(null);
   const isUnmountedRef = useRef(false);
   const jobRouteRef = useRef(null);
-  const maxExecutionTimeoutRef = useRef<number | null>(null);
+  const maxExecutionTimeoutRef = useRef<any | null>(null);
 
   const navigate = useNavigate()
 

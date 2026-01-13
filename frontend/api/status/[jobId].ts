@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { jobId } = req.query; // Extracts jobId from the URL
+  const { jobId } = req.query;
   const AWS_URL = process.env.VITE_COMPILER_URL;
 
   try {
