@@ -65,9 +65,10 @@ const Room = () => {
 
   const pollJobStatus = async () => {
     try {
+      console.log("Job Ref :- " + jobRouteRef.current)
       const res = await fetch(`/api${jobRouteRef.current}`)
       const result = await res.json();
-
+      console.log(result)
       handleJobStatus(result);
     } catch (error) {
       console.log(error)
@@ -279,11 +280,13 @@ const Room = () => {
       });
       
       const result = await response.json(); 
+      console.log(result)
       if(result.status !== "push-success"){
         handleJobFailure("Unable to Add You Code for Execution.")
         return;
       } 
 
+      console.log(result.statusUrl)
       jobRouteRef.current = result.statusUrl;
       pollJobStatus();
 
