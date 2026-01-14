@@ -66,7 +66,7 @@ const Room = () => {
   const pollJobStatus = async () => {
     try {
       console.log("Job Ref :- " + jobRouteRef.current)
-      const res = await fetch(`/api${jobRouteRef.current}`)
+      const res = await fetch(`/api/status?route=${jobRouteRef.current}`)
       const result = await res.json();
       console.log(result)
       handleJobStatus(result);
