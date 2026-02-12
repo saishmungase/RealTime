@@ -476,6 +476,7 @@ const Room = () => {
     };
 
     const updateHandler = (update: Uint8Array, origin: any) => {
+      console.log(origin)
       if (isApplyingRemoteUpdateRef.current) {
         console.log("⏭️ Skipping remote update (already applied)");
         return;
