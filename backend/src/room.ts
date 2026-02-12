@@ -29,33 +29,34 @@ export class Files {
         }
     }
 
-    updateRoomFileData(name?:string, extension?:string){
-        if(name){
+    updateRoomFileData(name?: string, extension?: string) {
+        if (name) {
             this.name = name;
         }
-        if(extension){
+        if (extension) {
             this.extension = extension;
         }
-        return{
-            newName : this.name,
-            newExtension : this.extension
+        return {
+            newName: this.name,
+            newExtension: this.extension
         };
     }
-
 }
 
 export class Room {
     public users: WebSocket[];
     public files: Files;
 
-    constructor(creator: WebSocket, name : string, extension : string) {
+    constructor(creator: WebSocket, name: string, extension: string) {
         this.files = new Files(name, extension);
         this.users = [];
         this.users.push(creator);
     }
 
     addUser(user: WebSocket) {
-        this.users.push(user);
+        if (!this.users.includes(user)) {
+            this.users.push(user);
+        }
         return this.files;
     }
 
@@ -64,20 +65,23 @@ export class Room {
     }
 
     addDataToFile(data: Uint8Array) {
-        const file = this.files
-        if(file) {
+        const file = this.files;
+        if (file) {
             Y.applyUpdate(file.document, data);
-            
             return file.getFileData();
         }
         return null;
     }
 
     getRoomFileData() {
-        return {document : this.files.document, file : this.files.name, extension : this.files.extension}; 
+        return {
+            document: this.files.document,
+            file: this.files.name,
+            extension: this.files.extension
+        };
     }
 
-    updateRoomFileData(name?:string, extension?:string){
+    updateRoomFileData(name?: string, extension?: string) {
         this.files.updateRoomFileData(name, extension);
     }
 }
