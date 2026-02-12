@@ -50,7 +50,7 @@ wss.on('connection', (ws: WebSocket) => {
           })();
           
           const doc = roomManager.getFileData(userName);
-          const encoded = doc?.document ? Y.encodeStateAsUpdate(doc.document) : [];
+          const encoded = doc?.document ? Y.encodeStateAsUpdate(doc.document) : new Uint8Array();
           console.log(`Sending init to user. File: ${doc?.file}${doc?.extension}, update size: ${encoded.length}`);
           
           ws.send(JSON.stringify({ 
@@ -70,11 +70,12 @@ wss.on('connection', (ws: WebSocket) => {
           const updateBuf = new Uint8Array(update);
           console.log(`Applying update from ${userName}, size: ${updateBuf.length}`);
           
-          roomManager.updateFile(userName, updateBuf);
-
+          const updatedDoc = roomManager.updateFile(userName, updateBuf);
+          
           room?.users.forEach((user) => {
             if (user !== ws && user.readyState === WebSocket.OPEN) {
-              user.send(JSON.stringify({ type: 'update', update }));
+              console.log(`Broadcasting update to other user`);
+              user.send(JSON.stringify({ type: 'update', update: Array.from(updateBuf) }));
             }
           });
           break;

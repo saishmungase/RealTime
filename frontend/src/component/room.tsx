@@ -55,6 +55,8 @@ const Room = () => {
   const bindingRef = useRef<MonacoBinding | null>(null);
   const awarenessRef = useRef<Awareness | null>(null);
   
+  const initialSyncCompleteRef = useRef(false);
+  
   const [connected, setConnected] = useState(false);
   const [userName, setUserName] = useState('');
   const [fileName, setFileName] = useState('main');
@@ -320,6 +322,7 @@ const Room = () => {
 
     console.log("=== Initializing Editor ===");
     startHistorySaving();
+    initialSyncCompleteRef.current = false;
 
     const yDoc = new Y.Doc();
     const yText = yDoc.getText('monaco');
@@ -346,7 +349,7 @@ const Room = () => {
       }
     });
 
-    const socket = new WebSocket("wss://realtime-x8ey.onrender.com"); 
+    const socket = new WebSocket("ws://localhost:8080"); 
     socket.binaryType = "arraybuffer";
     socketRef.current = socket;
     
@@ -393,17 +396,25 @@ const Room = () => {
             if (message.update && message.update.length > 0) {
               const update = new Uint8Array(message.update);
               console.log("📥 Applying initial state, size:", update.length);
+              
               Y.applyUpdate(yDoc, update);
+              
               setFileExtension(message.extension)
               setFileName(message.file)
             }
+            
+            setTimeout(() => {
+              initialSyncCompleteRef.current = true;
+              console.log("✅ Initial sync complete");
+            }, 100);
             break;
             
           case 'update':
             if (message.update && message.update.length > 0) {
               const update = new Uint8Array(message.update);
               console.log("📥 Applying update from server, size:", update.length);
-              Y.applyUpdate(yDoc, update);
+              
+              Y.applyUpdate(yDoc, update, 'server');
             }
             break;
             
@@ -431,7 +442,17 @@ const Room = () => {
     console.log("🔗 Monaco binding created");
 
     const updateHandler = (update: Uint8Array, origin: any) => {
-      if (origin !== 'server' && socket.readyState === WebSocket.OPEN) {
+      if (origin === 'server') {
+        console.log("⏭️ Skipping server-originated update");
+        return;
+      }
+      
+      if (!initialSyncCompleteRef.current) {
+        console.log("⏳ Waiting for initial sync before sending updates");
+        return;
+      }
+      
+      if (socket.readyState === WebSocket.OPEN) {
         console.log("📤 Sending update to server, size:", update.length);
         socket.send(JSON.stringify({
           userName,
