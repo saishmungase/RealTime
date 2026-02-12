@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import * as monaco from 'monaco-editor';
 import { MonacoBinding } from 'y-monaco';
 import { editor } from 'monaco-editor';
-import { Awareness, applyAwarenessUpdate } from 'y-protocols/awareness'; 
+import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'; 
 import { Play, X, Terminal, Loader2, CheckCircle, AlertCircle, Code2, Users, Check, Copy } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -20,21 +20,21 @@ interface HistoryItem {
   preview: string
 }
 
-self.MonacoEnvironment = {
-  getWorkerUrl: function (_moduleId: string, label: string) {
+(self).MonacoEnvironment = {
+  getWorker(_, label: string) {
+    if (label === 'json') {
+      return new Worker(new URL('monaco-editor/esm/vs/language/json/json.worker', import.meta.url), { type: 'module' });
+    }
+    if (label === 'css' || label === 'scss' || label === 'less') {
+      return new Worker(new URL('monaco-editor/esm/vs/language/css/css.worker', import.meta.url), { type: 'module' });
+    }
+    if (label === 'html' || label === 'handlebars' || label === 'razor') {
+      return new Worker(new URL('monaco-editor/esm/vs/language/html/html.worker', import.meta.url), { type: 'module' });
+    }
     if (label === 'typescript' || label === 'javascript') {
-      return './monaco-editor/ts.worker.js';
+      return new Worker(new URL('monaco-editor/esm/vs/language/typescript/ts.worker', import.meta.url), { type: 'module' });
     }
-    if (label === 'python') {
-      return './monaco-editor/python.worker.js';
-    }
-    if (label === 'java') {
-      return './monaco-editor/java.worker.js';
-    }
-    if (label === 'rust') {
-      return './monaco-editor/rust.worker.js';
-    }
-    return './monaco-editor/editor.worker.js';
+    return new Worker(new URL('monaco-editor/esm/vs/editor/editor.worker', import.meta.url), { type: 'module' });
   }
 };
 
@@ -44,10 +44,15 @@ const Room = () => {
   const historyIntervalRef = useRef<any | null>(null);
   const currentHistoryIdRef = useRef<string>('');
   
+  const yDocRef = useRef<Y.Doc | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const bindingRef = useRef<MonacoBinding | null>(null);
+  const awarenessRef = useRef<Awareness | null>(null);
+  
   const [connected, setConnected] = useState(false);
   const [userName, setUserName] = useState('');
   const [fileName, setFileName] = useState('main');
-  const [fileExtension, setFileExtension] = useState('js');
+  const [fileExtension, setFileExtension] = useState('py');
   const [isJoined, setIsJoined] = useState(false);
   const [showTerminal, setShowTerminal] = useState(false);
   const [terminalOutput, setTerminalOutput] = useState('');
@@ -223,9 +228,7 @@ const Room = () => {
 
   const saveFinalCodeAndLeave = () => {
     saveCurrentCodeToHistory();
-    
     stopHistorySaving();
-    
     setIsJoined(false);
   };
 
@@ -290,8 +293,8 @@ const Room = () => {
       jobRouteRef.current = result.statusUrl;
       pollJobStatus();
 
-    } catch (error : any) {
-      handleJobFailure(error.message);
+    } catch (error) {
+      handleJobFailure(error);
     }
   };
 
@@ -305,15 +308,17 @@ const Room = () => {
   useEffect(() => {
     if (!isJoined || !containerRef.current) return;
 
+    console.log("=== Initializing Editor ===");
     startHistorySaving();
 
     const yDoc = new Y.Doc();
     const yText = yDoc.getText('monaco');
+    yDocRef.current = yDoc;
     
     const model = monaco.editor.createModel('', getLanguageFromExtension(fileExtension));
     const editor = monaco.editor.create(containerRef.current, {
       model,
-      theme: 'vs',
+      theme: mode ? 'vs-dark' : 'vs',
       automaticLayout: true,
       fontSize: 16,
       wordWrap: 'on',
@@ -322,6 +327,7 @@ const Room = () => {
     editorRef.current = editor;
 
     const awareness = new Awareness(yDoc);
+    awarenessRef.current = awareness;
     
     awareness.setLocalState({
       user: {
@@ -332,9 +338,10 @@ const Room = () => {
 
     const socket = new WebSocket("wss://realtime-x8ey.onrender.com"); 
     socket.binaryType = "arraybuffer";
+    socketRef.current = socket;
     
     socket.onopen = () => {
-      console.log("Connected to server");
+      console.log("✅ Connected to server");
       setConnected(true);
       
       socket.send(JSON.stringify({
@@ -343,12 +350,10 @@ const Room = () => {
         fileName,
         fileExtension
       }));
-      
-      setIsJoined(true);
     };
 
     socket.onclose = () => {
-      console.log("Disconnected from server");
+      console.log("❌ Disconnected from server");
       setConnected(false);
     };
 
@@ -360,31 +365,34 @@ const Room = () => {
       try {
         if (event.data instanceof ArrayBuffer) {
           const update = new Uint8Array(event.data);
+          console.log("📥 Received binary update, size:", update.length);
           Y.applyUpdate(yDoc, update);
           return;
         }
 
         const message = JSON.parse(event.data);
-        console.log("Received message:", message);
+        console.log("📨 Received message:", message.type);
         
         switch (message.type) {
           case 'welcome':
-            console.log("Welcome message:", message.message);
+            console.log("Welcome:", message.message);
             break;
             
           case 'init':
+            console.log("📄 Init response - file:", message.file + message.extension);
             if (message.update && message.update.length > 0) {
               const update = new Uint8Array(message.update);
+              console.log("📥 Applying initial state, size:", update.length);
               Y.applyUpdate(yDoc, update);
-              console.log("File From Backend :- " + message.file+message.extension)
               setFileExtension(message.extension)
               setFileName(message.file)
             }
             break;
             
           case 'update':
-            if (message.update) {
+            if (message.update && message.update.length > 0) {
               const update = new Uint8Array(message.update);
+              console.log("📥 Applying update from server, size:", update.length);
               Y.applyUpdate(yDoc, update);
             }
             break;
@@ -409,9 +417,12 @@ const Room = () => {
     };
 
     const binding = new MonacoBinding(yText, model, new Set([editor]), awareness);
+    bindingRef.current = binding;
+    console.log("🔗 Monaco binding created");
 
-    yDoc.on('update', (update) => {
-      if (socket.readyState === WebSocket.OPEN) {
+    const updateHandler = (update: Uint8Array, origin: any) => {
+      if (origin !== 'server' && socket.readyState === WebSocket.OPEN) {
+        console.log("📤 Sending update to server, size:", update.length);
         socket.send(JSON.stringify({
           userName,
           type: 'update',
@@ -420,26 +431,59 @@ const Room = () => {
           update: Array.from(update)
         }));
       }
-    });
+    };
 
-    awareness.on('update', (update : Uint8Array) => {
+    yDoc.on('update', updateHandler);
+
+    const awarenessUpdateHandler = ({ added, updated, removed }: any) => {
       if (socket.readyState === WebSocket.OPEN) {
+        const update = encodeAwarenessUpdate(awareness, [
+          ...added,
+          ...updated,
+          ...removed
+        ]);
         socket.send(JSON.stringify({
           userName,
           type: 'awareness',
           update: Array.from(update)
         }));
       }
-    });
+    };
+
+    awareness.on('update', awarenessUpdateHandler);
 
     return () => {
+      console.log("=== Cleaning up Editor ===");
       stopHistorySaving();
       
-      if (binding) binding.destroy();
-      if (awareness) awareness.destroy();
-      if (yDoc) yDoc.destroy();
-      if (editor) editor.dispose();
-      if (socket && socket.readyState === WebSocket.OPEN) socket.close();
+      yDoc.off('update', updateHandler);
+      awareness.off('update', awarenessUpdateHandler);
+      
+      if (binding) {
+        console.log("Destroying binding");
+        binding.destroy();
+      }
+      if (awareness) {
+        console.log("Destroying awareness");
+        awareness.destroy();
+      }
+      if (yDoc) {
+        console.log("Destroying Y.Doc");
+        yDoc.destroy();
+      }
+      if (editor) {
+        console.log("Disposing editor");
+        editor.dispose();
+      }
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log("Closing socket");
+        socket.close();
+      }
+      
+      yDocRef.current = null;
+      socketRef.current = null;
+      bindingRef.current = null;
+      awarenessRef.current = null;
     };
   }, [isJoined, userName, fileName, fileExtension]);
 
