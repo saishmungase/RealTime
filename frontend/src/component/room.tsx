@@ -349,7 +349,7 @@ const Room = () => {
       }
     });
 
-    const socket = new WebSocket("ws://localhost:8080"); 
+    const socket = new WebSocket("wss://realtime-x8ey.onrender.com"); 
     socket.binaryType = "arraybuffer";
     socketRef.current = socket;
     
