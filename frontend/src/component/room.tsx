@@ -293,8 +293,8 @@ const Room = () => {
       jobRouteRef.current = result.statusUrl;
       pollJobStatus();
 
-    } catch (error) {
-      handleJobFailure(error);
+    } catch (error : any) {
+      handleJobFailure(error.message);
     }
   };
 
