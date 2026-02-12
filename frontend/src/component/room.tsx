@@ -55,7 +55,10 @@ const Room = () => {
   const bindingRef = useRef<MonacoBinding | null>(null);
   const awarenessRef = useRef<Awareness | null>(null);
   
+  const pendingUpdatesRef = useRef<Uint8Array[]>([]);
+  const sendTimeoutRef = useRef<any | null>(null);
   const initialSyncCompleteRef = useRef(false);
+  const isApplyingRemoteUpdateRef = useRef(false);
   
   const [connected, setConnected] = useState(false);
   const [userName, setUserName] = useState('');
@@ -323,6 +326,7 @@ const Room = () => {
     console.log("=== Initializing Editor ===");
     startHistorySaving();
     initialSyncCompleteRef.current = false;
+    isApplyingRemoteUpdateRef.current = false;
 
     const yDoc = new Y.Doc();
     const yText = yDoc.getText('monaco');
@@ -336,6 +340,11 @@ const Room = () => {
       fontSize: 16,
       wordWrap: 'on',
       minimap: { enabled: true },
+      quickSuggestions: false,
+      suggestOnTriggerCharacters: false,
+      acceptSuggestionOnEnter: 'off',
+      tabCompletion: 'off',
+      wordBasedSuggestions: 'off',
     });
     editorRef.current = editor;
 
@@ -379,7 +388,9 @@ const Room = () => {
         if (event.data instanceof ArrayBuffer) {
           const update = new Uint8Array(event.data);
           console.log("📥 Received binary update, size:", update.length);
+          isApplyingRemoteUpdateRef.current = true;
           Y.applyUpdate(yDoc, update);
+          isApplyingRemoteUpdateRef.current = false;
           return;
         }
 
@@ -397,7 +408,9 @@ const Room = () => {
               const update = new Uint8Array(message.update);
               console.log("📥 Applying initial state, size:", update.length);
               
+              isApplyingRemoteUpdateRef.current = true;
               Y.applyUpdate(yDoc, update);
+              isApplyingRemoteUpdateRef.current = false;
               
               setFileExtension(message.extension)
               setFileName(message.file)
@@ -405,8 +418,8 @@ const Room = () => {
             
             setTimeout(() => {
               initialSyncCompleteRef.current = true;
-              console.log("✅ Initial sync complete");
-            }, 100);
+              console.log("✅ Initial sync complete - ready to send updates");
+            }, 200);
             break;
             
           case 'update':
@@ -414,7 +427,9 @@ const Room = () => {
               const update = new Uint8Array(message.update);
               console.log("📥 Applying update from server, size:", update.length);
               
-              Y.applyUpdate(yDoc, update, 'server');
+              isApplyingRemoteUpdateRef.current = true;
+              Y.applyUpdate(yDoc, update);
+              isApplyingRemoteUpdateRef.current = false;
             }
             break;
             
@@ -441,9 +456,28 @@ const Room = () => {
     bindingRef.current = binding;
     console.log("🔗 Monaco binding created");
 
+    const flushPendingUpdates = () => {
+      if (pendingUpdatesRef.current.length === 0) return;
+      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
+      
+      const mergedUpdate = Y.mergeUpdates(pendingUpdatesRef.current);
+      
+      console.log(`📤 Sending batched update (${pendingUpdatesRef.current.length} updates merged), size: ${mergedUpdate.length}`);
+      
+      socketRef.current.send(JSON.stringify({
+        userName,
+        type: 'update',
+        fileName,
+        fileExtension,
+        update: Array.from(mergedUpdate)
+      }));
+      
+      pendingUpdatesRef.current = [];
+    };
+
     const updateHandler = (update: Uint8Array, origin: any) => {
-      if (origin === 'server') {
-        console.log("⏭️ Skipping server-originated update");
+      if (isApplyingRemoteUpdateRef.current) {
+        console.log("⏭️ Skipping remote update (already applied)");
         return;
       }
       
@@ -452,16 +486,15 @@ const Room = () => {
         return;
       }
       
-      if (socket.readyState === WebSocket.OPEN) {
-        console.log("📤 Sending update to server, size:", update.length);
-        socket.send(JSON.stringify({
-          userName,
-          type: 'update',
-          fileName,
-          fileExtension,
-          update: Array.from(update)
-        }));
+      pendingUpdatesRef.current.push(update);
+      
+      if (sendTimeoutRef.current) {
+        clearTimeout(sendTimeoutRef.current);
       }
+      
+      sendTimeoutRef.current = setTimeout(() => {
+        flushPendingUpdates();
+      }, 50);
     };
 
     yDoc.on('update', updateHandler);
@@ -486,6 +519,11 @@ const Room = () => {
     return () => {
       console.log("=== Cleaning up Editor ===");
       stopHistorySaving();
+      
+      if (sendTimeoutRef.current) {
+        clearTimeout(sendTimeoutRef.current);
+      }
+      flushPendingUpdates();
       
       yDoc.off('update', updateHandler);
       awareness.off('update', awarenessUpdateHandler);
@@ -515,6 +553,7 @@ const Room = () => {
       socketRef.current = null;
       bindingRef.current = null;
       awarenessRef.current = null;
+      pendingUpdatesRef.current = [];
     };
   }, [isJoined, userName, fileName, fileExtension]);
 
