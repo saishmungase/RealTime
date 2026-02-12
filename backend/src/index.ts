@@ -56,6 +56,14 @@ wss.on('connection', (ws: WebSocket) => {
           });
           break;
 
+        case 'awareness':
+          room?.users.forEach((user) => {
+            if (user !== ws && user.readyState === WebSocket.OPEN) {
+              user.send(JSON.stringify({ type: 'awareness', update }));
+            }
+          });
+          break;
+
         default:
           ws.send(JSON.stringify({ type: 'error', message: 'Unknown type' }));
       }
