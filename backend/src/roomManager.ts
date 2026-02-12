@@ -24,6 +24,10 @@ export class RoomManager {
         const room = this.getRoom(userName);
         if (room) {
             room.removeUser(user);
+            if (room.users.length === 0) {
+                this.Rooms.delete(userName);
+                console.log(`Room ${userName} is empty and has been removed`);
+            }
         }
     }
 

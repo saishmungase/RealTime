@@ -7,15 +7,14 @@ import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protoc
 import { Play, X, Terminal, Loader2, CheckCircle, AlertCircle, Code2, Users, Check, Copy } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-
-import moonImg from '../public/moon.png'
-import sunImg from '../public/sun.png'
-
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+
+import moonImg from '../public/moon.png'
+import sunImg from '../public/sun.png'
 
 interface HistoryItem {
   id: string
@@ -299,12 +298,8 @@ const Room = () => {
       jobRouteRef.current = result.statusUrl;
       pollJobStatus();
 
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        handleJobFailure(error.message);
-      } else {
-        handleJobFailure("An unexpected error occurred");
-      }
+    } catch (error : any) {
+      handleJobFailure(error.message);
     }
   };
 
