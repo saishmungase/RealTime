@@ -1,10 +1,9 @@
 import { motion, Variants } from "framer-motion"
-import { Code2, Users, Zap, Globe, Sparkles, ArrowRight } from "lucide-react"
+import { Code2, Users, Zap, Globe, Sparkles } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 export default function Landing() {
-  const [roomId, setRoomId] = useState("")
   const [roomCount, setRoomCount] = useState(-1);
   const navigate = useNavigate();
   useEffect(() => {
