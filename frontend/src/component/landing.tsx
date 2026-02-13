@@ -93,27 +93,6 @@ export default function Landing() {
                 <Sparkles className="w-5 h-5" />
                 Create New Room
               </motion.button>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter room ID"
-                  value={roomId}
-                  onChange={(e) => setRoomId(e.target.value)}
-                  className="px-4 py-4 border-2 border-blue-200 rounded-full focus:border-blue-500 focus:outline-none transition-colors"
-                />
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-6 py-4 bg-white border-2 border-blue-500 text-blue-600 rounded-full font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center gap-2"
-                  onClick={() => {
-                    navigate("/room");
-                  }}
-                >
-                  <ArrowRight className="w-5 h-5" />
-                  Join
-                </motion.button>
-              </div>
             </div>
           </motion.div>
         </div>
